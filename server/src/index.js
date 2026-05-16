@@ -9,10 +9,14 @@
 
 'use strict';
 
+const path = require('path');
+const dotenv = require('dotenv');
+
+// .env 파일 로드 — __dirname 기준으로 경로를 명시해 실행 위치에 무관하게 동작
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
+
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
-const path = require('path');
 
 // 라우터 import
 const healthRouter = require('./routes/health');
@@ -20,9 +24,6 @@ const ocrRouter = require('./routes/ocr');
 
 // 미들웨어 import
 const errorHandler = require('./middleware/errorHandler');
-
-// .env 파일 로드
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;

@@ -2,10 +2,9 @@
  * OCR 라우터
  *
  * POST /api/ocr/upload
- * - 이미지를 업로드하고 Google Vision API로 OCR 처리를 요청한다.
- * - 현재는 기본 구조만 작성되어 있으며, Google Vision API 연동은 추후 구현한다.
- *
- * TODO: Google Vision API 연동 시 ocrService를 완성할 것
+ * - 이미지를 업로드하고 Google Vision API로 OCR 처리를 수행한다.
+ * - OCR 성공/실패 여부와 무관하게 업로드된 임시 파일을 삭제한다.
+ * - 결과를 rawText + parsed 구조로 반환한다.
  */
 
 'use strict';
@@ -14,27 +13,29 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const ocrService = require('../services/ocrService');
+const fs = require('fs');
+const { processImage } = require('../services/ocr');
 
-// multer: 업로드된 파일을 uploads/ 폴더에 저장
+// ─── multer 설정 ──────────────────────────────────────────────────────────────
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, path.join(__dirname, '..', '..', 'uploads'));
   },
   filename: function (req, file, cb) {
-    // 파일명 충돌 방지를 위해 타임스탬프 추가
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
     cb(null, `${uniqueSuffix}-${file.originalname}`);
   },
 });
 
-// 이미지 파일만 허용 (보안 필터링)
+// jpg/jpeg/png/webp 만 허용
+const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
+
 const fileFilter = (req, file, cb) => {
-  const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-  if (allowedMimes.includes(file.mimetype)) {
+  if (ALLOWED_MIMES.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('이미지 파일만 업로드 가능합니다. (jpg, png, webp, gif)'), false);
+    cb(new Error('허용되지 않는 파일 형식입니다. (jpg, jpeg, png, webp)'), false);
   }
 };
 
@@ -44,25 +45,48 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 최대 10MB
 });
 
-// POST /api/ocr/upload
-// 이미지 업로드 및 OCR 처리 요청
-router.post('/upload', upload.single('image'), async (req, res) => {
+// ─── 유틸 ─────────────────────────────────────────────────────────────────────
+
+/**
+ * 업로드된 임시 파일을 안전하게 삭제한다.
+ * 파일이 이미 없거나 삭제에 실패해도 예외를 던지지 않는다.
+ *
+ * @param {string | undefined} filePath
+ */
+async function safeUnlink(filePath) {
+  if (!filePath) return;
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: '이미지 파일이 필요합니다.' });
-    }
+    await fs.promises.unlink(filePath);
+  } catch (_err) {
+    // 파일이 없거나 이미 삭제된 경우 무시
+  }
+}
 
-    // OCR 서비스 호출 (Google Vision API 연동 후 활성화)
-    const result = await ocrService.extractText(req.file.path);
+// ─── 라우터 ───────────────────────────────────────────────────────────────────
 
-    res.status(200).json({
-      message: 'OCR 처리 완료',
-      filename: req.file.filename,
-      text: result,
+// POST /api/ocr/upload
+router.post('/upload', upload.single('image'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ success: false, error: '이미지 파일이 필요합니다.' });
+  }
+
+  const filePath = req.file.path;
+
+  console.time('OCR_PROCESS');
+  try {
+    const { rawText, parsed } = await processImage(filePath);
+
+    console.timeEnd('OCR_PROCESS');
+    return res.status(200).json({
+      success: true,
+      data: { rawText, parsed },
     });
   } catch (error) {
+    console.timeEnd('OCR_PROCESS');
     console.error('[OCR] 처리 중 오류:', error.message);
-    res.status(500).json({ error: 'OCR 처리 중 오류가 발생했습니다.' });
+    return res.status(500).json({ success: false, error: 'OCR 처리 실패' });
+  } finally {
+    await safeUnlink(filePath);
   }
 });
 

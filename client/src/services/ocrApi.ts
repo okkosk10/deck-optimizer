@@ -1,7 +1,20 @@
+export interface ParsedCard {
+  cardName: string | null;
+  cost: string | null;
+  attack: string | null;
+  defense: string | null;
+  description: string | null;
+}
+
 export interface OcrResult {
-  message: string;
-  filename: string;
-  text: string;
+  rawText: string;
+  parsed: ParsedCard;
+}
+
+interface OcrResponse {
+  success: boolean;
+  data?: OcrResult;
+  error?: string;
 }
 
 export async function uploadAndOcr(file: File): Promise<OcrResult> {
@@ -13,10 +26,14 @@ export async function uploadAndOcr(file: File): Promise<OcrResult> {
     body: formData,
   });
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: '알 수 없는 오류' }));
-    throw new Error(err.error ?? `HTTP ${res.status}`);
+  const body: OcrResponse = await res.json().catch(() => ({
+    success: false,
+    error: '응답 파싱 실패',
+  }));
+
+  if (!res.ok || !body.success || !body.data) {
+    throw new Error(body.error ?? `HTTP ${res.status}`);
   }
 
-  return res.json();
+  return body.data;
 }

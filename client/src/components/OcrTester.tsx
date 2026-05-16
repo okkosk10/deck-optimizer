@@ -44,7 +44,7 @@ export default function OcrTester() {
         <input
           ref={inputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
+          accept="image/jpeg,image/png,image/webp"
           onChange={handleFileChange}
         />
 
@@ -79,6 +79,8 @@ export default function OcrTester() {
       {result && (
         <div style={{ marginTop: 24 }}>
           <h2>추출 결과</h2>
+
+          <h3 style={{ marginBottom: 8 }}>원시 텍스트</h3>
           <pre
             style={{
               background: '#f1f5f9',
@@ -89,8 +91,30 @@ export default function OcrTester() {
               minHeight: 80,
             }}
           >
-            {result.text || '(인식된 텍스트 없음)'}
+            {result.rawText || '(인식된 텍스트 없음)'}
           </pre>
+
+          <h3 style={{ marginTop: 16, marginBottom: 8 }}>파싱된 카드 정보</h3>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+            <tbody>
+              {(
+                [
+                  ['카드명', result.parsed.cardName],
+                  ['코스트', result.parsed.cost],
+                  ['공격력', result.parsed.attack],
+                  ['방어력', result.parsed.defense],
+                  ['설명', result.parsed.description],
+                ] as [string, string | null][]
+              ).map(([label, value]) => (
+                <tr key={label} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                  <td style={{ padding: '8px 12px', fontWeight: 600, width: 80, color: '#475569' }}>{label}</td>
+                  <td style={{ padding: '8px 12px', color: value ? '#0f172a' : '#94a3b8' }}>
+                    {value ?? '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
