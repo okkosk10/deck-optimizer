@@ -1,72 +1,119 @@
-import { useState, useRef } from 'react';
-import { uploadAndOcr } from '../services/ocrApi';
-import type { OcrResult } from '../services/ocrApi';
+import { useEffect, useRef, useState } from 'react';
+import { uploadAndOcrBatch } from '../services/ocrApi';
+import type { BatchOcrResult } from '../services/ocrApi';
+
+interface PreviewFile {
+  file: File;
+  url: string;
+}
+
+const fieldLabels: [string, keyof BatchOcrResult['parsed']][] = [
+  ['카드명', 'cardName'],
+  ['코스트', 'cost'],
+  ['공격력', 'attack'],
+  ['방어력', 'defense'],
+  ['설명', 'description'],
+];
 
 export default function OcrTester() {
-  const [preview, setPreview] = useState<string | null>(null);
-  const [result, setResult] = useState<OcrResult | null>(null);
+  const [previews, setPreviews] = useState<PreviewFile[]>([]);
+  const [results, setResults] = useState<BatchOcrResult[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    return () => {
+      previews.forEach((preview) => URL.revokeObjectURL(preview.url));
+    };
+  }, [previews]);
+
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setResult(null);
+    const files = Array.from(e.target.files ?? []);
+
+    previews.forEach((preview) => URL.revokeObjectURL(preview.url));
+    setResults([]);
     setError(null);
-    setPreview(URL.createObjectURL(file));
+    setPreviews(files.map((file) => ({ file, url: URL.createObjectURL(file) })));
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const file = inputRef.current?.files?.[0];
-    if (!file) return;
+
+    if (previews.length === 0) return;
 
     setLoading(true);
     setError(null);
-    setResult(null);
+    setResults([]);
 
     try {
-      const data = await uploadAndOcr(file);
-      setResult(data);
+      const data = await uploadAndOcrBatch(previews.map((preview) => preview.file));
+      setResults(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '오류 발생');
+      setError(err instanceof Error ? err.message : '오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div style={{ maxWidth: 600, margin: '40px auto', padding: '0 16px', fontFamily: 'sans-serif' }}>
-      <h1 style={{ marginBottom: 24 }}>OCR 테스트</h1>
+    <main style={{ maxWidth: 960, margin: '40px auto', padding: '0 16px', fontFamily: 'sans-serif' }}>
+      <h1 style={{ marginBottom: 8 }}>OCR 테스트</h1>
+      <p style={{ marginBottom: 24, color: '#64748b' }}>
+        여러 장의 스크린샷을 한 번에 올려 OCR 결과를 확인합니다.
+      </p>
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <input
           ref={inputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp"
+          multiple
           onChange={handleFileChange}
         />
 
-        {preview && (
-          <img
-            src={preview}
-            alt="미리보기"
-            style={{ maxWidth: '100%', maxHeight: 300, objectFit: 'contain', border: '1px solid #ccc', borderRadius: 8 }}
-          />
+        {previews.length > 0 && (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: 12,
+            }}
+          >
+            {previews.map((preview, index) => (
+              <figure key={`${preview.file.name}-${index}`} style={{ margin: 0 }}>
+                <img
+                  src={preview.url}
+                  alt={`${preview.file.name} 미리보기`}
+                  style={{
+                    width: '100%',
+                    height: 160,
+                    objectFit: 'contain',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: 8,
+                    background: '#f8fafc',
+                  }}
+                />
+                <figcaption style={{ marginTop: 6, fontSize: 13, color: '#475569' }}>
+                  {index + 1}. {preview.file.name}
+                </figcaption>
+              </figure>
+            ))}
+          </div>
         )}
 
         <button
           type="submit"
-          disabled={loading || !preview}
+          disabled={loading || previews.length === 0}
           style={{
+            alignSelf: 'flex-start',
             padding: '10px 20px',
             fontSize: 16,
-            cursor: loading || !preview ? 'not-allowed' : 'pointer',
-            opacity: loading || !preview ? 0.5 : 1,
+            cursor: loading || previews.length === 0 ? 'not-allowed' : 'pointer',
+            opacity: loading || previews.length === 0 ? 0.5 : 1,
           }}
         >
-          {loading ? '처리 중...' : 'OCR 실행'}
+          {loading ? '처리 중...' : `${previews.length || 0}장 OCR 실행`}
         </button>
       </form>
 
@@ -76,47 +123,58 @@ export default function OcrTester() {
         </div>
       )}
 
-      {result && (
-        <div style={{ marginTop: 24 }}>
+      {results.length > 0 && (
+        <section style={{ marginTop: 32, textAlign: 'left' }}>
           <h2>추출 결과</h2>
 
-          <h3 style={{ marginBottom: 8 }}>원시 텍스트</h3>
-          <pre
-            style={{
-              background: '#f1f5f9',
-              padding: 16,
-              borderRadius: 8,
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              minHeight: 80,
-            }}
-          >
-            {result.rawText || '(인식된 텍스트 없음)'}
-          </pre>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {results.map((result) => (
+              <article
+                key={`${result.fileName}-${result.index}`}
+                style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 16 }}
+              >
+                <h3 style={{ marginTop: 0 }}>
+                  {result.index + 1}. {result.fileName}
+                </h3>
 
-          <h3 style={{ marginTop: 16, marginBottom: 8 }}>파싱된 카드 정보</h3>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-            <tbody>
-              {(
-                [
-                  ['카드명', result.parsed.cardName],
-                  ['코스트', result.parsed.cost],
-                  ['공격력', result.parsed.attack],
-                  ['방어력', result.parsed.defense],
-                  ['설명', result.parsed.description],
-                ] as [string, string | null][]
-              ).map(([label, value]) => (
-                <tr key={label} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                  <td style={{ padding: '8px 12px', fontWeight: 600, width: 80, color: '#475569' }}>{label}</td>
-                  <td style={{ padding: '8px 12px', color: value ? '#0f172a' : '#94a3b8' }}>
-                    {value ?? '—'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                <h4 style={{ marginBottom: 8 }}>파싱된 카드 정보</h4>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                  <tbody>
+                    {fieldLabels.map(([label, key]) => {
+                      const value = result.parsed[key];
+
+                      return (
+                        <tr key={label} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                          <td style={{ padding: '8px 12px', fontWeight: 600, width: 88, color: '#475569' }}>
+                            {label}
+                          </td>
+                          <td style={{ padding: '8px 12px', color: value ? '#0f172a' : '#94a3b8' }}>
+                            {value ?? '-'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+
+                <h4 style={{ marginBottom: 8 }}>원시 텍스트</h4>
+                <pre
+                  style={{
+                    background: '#f1f5f9',
+                    padding: 16,
+                    borderRadius: 8,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    minHeight: 80,
+                  }}
+                >
+                  {result.rawText || '(인식된 텍스트 없음)'}
+                </pre>
+              </article>
+            ))}
+          </div>
+        </section>
       )}
-    </div>
+    </main>
   );
 }

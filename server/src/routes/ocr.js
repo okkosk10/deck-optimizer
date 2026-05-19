@@ -1,12 +1,3 @@
-/**
- * OCR 라우터
- *
- * POST /api/ocr/upload
- * - 이미지를 업로드하고 Google Vision API로 OCR 처리를 수행한다.
- * - OCR 성공/실패 여부와 무관하게 업로드된 임시 파일을 삭제한다.
- * - 결과를 rawText + parsed 구조로 반환한다.
- */
-
 'use strict';
 
 const express = require('express');
@@ -15,8 +6,6 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { processImage } = require('../services/ocr');
-
-// ─── multer 설정 ──────────────────────────────────────────────────────────────
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -28,43 +17,54 @@ const storage = multer.diskStorage({
   },
 });
 
-// jpg/jpeg/png/webp 만 허용
 const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const fileFilter = (req, file, cb) => {
   if (ALLOWED_MIMES.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('허용되지 않는 파일 형식입니다. (jpg, jpeg, png, webp)'), false);
+    cb(new Error('허용되지 않는 파일 형식입니다. jpg, jpeg, png, webp만 업로드할 수 있습니다.'), false);
   }
 };
 
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 최대 10MB
+  limits: { fileSize: 10 * 1024 * 1024 },
 });
 
-// ─── 유틸 ─────────────────────────────────────────────────────────────────────
-
-/**
- * 업로드된 임시 파일을 안전하게 삭제한다.
- * 파일이 이미 없거나 삭제에 실패해도 예외를 던지지 않는다.
- *
- * @param {string | undefined} filePath
- */
 async function safeUnlink(filePath) {
   if (!filePath) return;
+
   try {
     await fs.promises.unlink(filePath);
   } catch (_err) {
-    // 파일이 없거나 이미 삭제된 경우 무시
+    // Temporary upload cleanup is best-effort.
   }
 }
 
-// ─── 라우터 ───────────────────────────────────────────────────────────────────
+function getClientErrorMessage(error, fallback) {
+  const message = error instanceof Error ? error.message : '';
 
-// POST /api/ocr/upload
+  if (message.includes('GOOGLE_APPLICATION_CREDENTIALS')) {
+    return message;
+  }
+
+  if (message.includes('Google Vision 인증 파일')) {
+    return message;
+  }
+
+  return fallback;
+}
+
+function decodeOriginalName(originalName) {
+  try {
+    return Buffer.from(originalName, 'latin1').toString('utf8');
+  } catch (_err) {
+    return originalName;
+  }
+}
+
 router.post('/upload', upload.single('image'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ success: false, error: '이미지 파일이 필요합니다.' });
@@ -84,9 +84,47 @@ router.post('/upload', upload.single('image'), async (req, res) => {
   } catch (error) {
     console.timeEnd('OCR_PROCESS');
     console.error('[OCR] 처리 중 오류:', error.message);
-    return res.status(500).json({ success: false, error: 'OCR 처리 실패' });
+    return res.status(500).json({
+      success: false,
+      error: getClientErrorMessage(error, 'OCR 처리 실패'),
+    });
   } finally {
     await safeUnlink(filePath);
+  }
+});
+
+router.post('/batch', upload.array('images', 10), async (req, res) => {
+  const files = req.files || [];
+
+  if (files.length === 0) {
+    return res.status(400).json({ success: false, error: '이미지 파일이 필요합니다.' });
+  }
+
+  console.time('OCR_BATCH_PROCESS');
+  try {
+    const data = [];
+
+    for (const [index, file] of files.entries()) {
+      const { rawText, parsed } = await processImage(file.path);
+      data.push({
+        index,
+        fileName: decodeOriginalName(file.originalname),
+        rawText,
+        parsed,
+      });
+    }
+
+    console.timeEnd('OCR_BATCH_PROCESS');
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    console.timeEnd('OCR_BATCH_PROCESS');
+    console.error('[OCR_BATCH] 처리 중 오류:', error.message);
+    return res.status(500).json({
+      success: false,
+      error: getClientErrorMessage(error, 'OCR 배치 처리 실패'),
+    });
+  } finally {
+    await Promise.all(files.map((file) => safeUnlink(file.path)));
   }
 });
 
