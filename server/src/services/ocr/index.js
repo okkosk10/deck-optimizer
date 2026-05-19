@@ -1,7 +1,10 @@
 'use strict';
 
+const fs = require('fs');
 const { extractText } = require('./extractText');
 const { parseCardText } = require('./parseCardText');
+const { parseDeckText } = require('./deckParser');
+const { createDeckRegionCrop } = require('./imagePreprocess');
 
 /**
  * 이미지 경로를 받아 OCR 텍스트 추출 및 카드 정보 파싱을 수행한다.
@@ -15,4 +18,41 @@ async function processImage(imagePath) {
   return { rawText, parsed };
 }
 
-module.exports = { processImage, extractText, parseCardText };
+async function safeUnlink(filePath) {
+  if (!filePath) return;
+
+  try {
+    await fs.promises.unlink(filePath);
+  } catch (_err) {
+    // Temporary preprocessing files are best-effort cleanup.
+  }
+}
+
+async function processDeckScreenshot(imagePath) {
+  const crop = await createDeckRegionCrop(imagePath);
+
+  try {
+    const rawText = await extractText(crop.path);
+    const cards = parseDeckText(rawText);
+    const parsed = cards[0] ?? parseCardText(rawText);
+
+    return {
+      rawText,
+      parsed,
+      cards,
+      preprocessing: {
+        mode: 'deck-region-crop',
+        region: crop.region,
+        sourceSize: crop.sourceSize,
+      },
+      warnings:
+        cards.length === 0
+          ? ['카드 후보를 찾지 못했습니다. 카드 목록 영역 crop 비율을 조정해야 할 수 있습니다.']
+          : [],
+    };
+  } finally {
+    await safeUnlink(crop.path);
+  }
+}
+
+module.exports = { processImage, processDeckScreenshot, extractText, parseCardText, parseDeckText };

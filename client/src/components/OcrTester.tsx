@@ -7,13 +7,7 @@ interface PreviewFile {
   url: string;
 }
 
-const fieldLabels: [string, keyof BatchOcrResult['parsed']][] = [
-  ['카드명', 'cardName'],
-  ['코스트', 'cost'],
-  ['공격력', 'attack'],
-  ['방어력', 'defense'],
-  ['설명', 'description'],
-];
+const emptyText = '-';
 
 export default function OcrTester() {
   const [previews, setPreviews] = useState<PreviewFile[]>([]);
@@ -57,10 +51,10 @@ export default function OcrTester() {
   }
 
   return (
-    <main style={{ maxWidth: 960, margin: '40px auto', padding: '0 16px', fontFamily: 'sans-serif' }}>
+    <main style={{ maxWidth: 1040, margin: '40px auto', padding: '0 16px', fontFamily: 'sans-serif' }}>
       <h1 style={{ marginBottom: 8 }}>OCR 테스트</h1>
       <p style={{ marginBottom: 24, color: '#64748b' }}>
-        여러 장의 스크린샷을 한 번에 올려 OCR 결과를 확인합니다.
+        여러 장의 스크린샷에서 오른쪽 카드 목록 영역만 잘라 OCR 결과를 확인합니다.
       </p>
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -137,27 +131,48 @@ export default function OcrTester() {
                   {result.index + 1}. {result.fileName}
                 </h3>
 
-                <h4 style={{ marginBottom: 8 }}>파싱된 카드 정보</h4>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-                  <tbody>
-                    {fieldLabels.map(([label, key]) => {
-                      const value = result.parsed[key];
+                {result.preprocessing && (
+                  <p style={{ marginTop: 0, color: '#64748b', fontSize: 13 }}>
+                    crop: x {result.preprocessing.region.left}, y {result.preprocessing.region.top}, w{' '}
+                    {result.preprocessing.region.width}, h {result.preprocessing.region.height}
+                  </p>
+                )}
 
-                      return (
-                        <tr key={label} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                          <td style={{ padding: '8px 12px', fontWeight: 600, width: 88, color: '#475569' }}>
-                            {label}
-                          </td>
-                          <td style={{ padding: '8px 12px', color: value ? '#0f172a' : '#94a3b8' }}>
-                            {value ?? '-'}
+                {result.warnings && result.warnings.length > 0 && (
+                  <div style={{ marginBottom: 16, padding: 12, background: '#fef3c7', borderRadius: 8, color: '#92400e' }}>
+                    {result.warnings.join(' ')}
+                  </div>
+                )}
+
+                <h4 style={{ marginBottom: 8 }}>카드 후보</h4>
+                {result.cards && result.cards.length > 0 ? (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', width: 56 }}>#</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', width: 96 }}>코스트</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', width: 180 }}>카드명</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left' }}>설명 후보</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {result.cards.map((card, cardIndex) => (
+                        <tr key={`${card.cardName}-${cardIndex}`} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                          <td style={{ padding: '8px 12px', color: '#64748b' }}>{cardIndex + 1}</td>
+                          <td style={{ padding: '8px 12px' }}>{card.cost ?? emptyText}</td>
+                          <td style={{ padding: '8px 12px', fontWeight: 600 }}>{card.cardName ?? emptyText}</td>
+                          <td style={{ padding: '8px 12px', color: card.description ? '#334155' : '#94a3b8' }}>
+                            {card.description ?? emptyText}
                           </td>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p style={{ color: '#94a3b8' }}>감지된 카드 후보가 없습니다.</p>
+                )}
 
-                <h4 style={{ marginBottom: 8 }}>원시 텍스트</h4>
+                <h4 style={{ marginBottom: 8 }}>카드 영역 OCR 텍스트</h4>
                 <pre
                   style={{
                     background: '#f1f5f9',

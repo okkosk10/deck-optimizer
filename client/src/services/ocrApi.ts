@@ -6,6 +6,10 @@ export interface ParsedCard {
   description: string | null;
 }
 
+export interface DetectedCard extends ParsedCard {
+  sources?: string[];
+}
+
 export interface OcrResult {
   rawText: string;
   parsed: ParsedCard;
@@ -14,6 +18,21 @@ export interface OcrResult {
 export interface BatchOcrResult extends OcrResult {
   index: number;
   fileName: string;
+  cards?: DetectedCard[];
+  preprocessing?: {
+    mode: string;
+    region: {
+      left: number;
+      top: number;
+      width: number;
+      height: number;
+    };
+    sourceSize: {
+      width: number;
+      height: number;
+    };
+  };
+  warnings?: string[];
 }
 
 interface OcrResponse {

@@ -5,7 +5,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { processImage } = require('../services/ocr');
+const { processImage, processDeckScreenshot } = require('../services/ocr');
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -105,12 +105,15 @@ router.post('/batch', upload.array('images', 10), async (req, res) => {
     const data = [];
 
     for (const [index, file] of files.entries()) {
-      const { rawText, parsed } = await processImage(file.path);
+      const { rawText, parsed, cards, preprocessing, warnings } = await processDeckScreenshot(file.path);
       data.push({
         index,
         fileName: decodeOriginalName(file.originalname),
         rawText,
         parsed,
+        cards,
+        preprocessing,
+        warnings,
       });
     }
 
