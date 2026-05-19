@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { uploadAndOcrBatch } from '../services/ocrApi';
-import type { BatchOcrResult } from '../services/ocrApi';
+import type { BatchOcrResult, DetectedCard } from '../services/ocrApi';
 
 interface PreviewFile {
   file: File;
@@ -9,12 +9,30 @@ interface PreviewFile {
 
 const emptyText = '-';
 
+function collectDetectedCards(results: BatchOcrResult[]) {
+  const cards: DetectedCard[] = [];
+
+  for (const result of results) {
+    for (const card of result.cards ?? []) {
+      if (!card.cardName) continue;
+
+      cards.push({
+        ...card,
+        sourceFile: result.fileName,
+      });
+    }
+  }
+
+  return cards;
+}
+
 export default function OcrTester() {
   const [previews, setPreviews] = useState<PreviewFile[]>([]);
   const [results, setResults] = useState<BatchOcrResult[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const mergedCards = useMemo(() => collectDetectedCards(results), [results]);
 
   useEffect(() => {
     return () => {
@@ -121,6 +139,49 @@ export default function OcrTester() {
         <section style={{ marginTop: 32, textAlign: 'left' }}>
           <h2>추출 결과</h2>
 
+          <section style={{ marginBottom: 24, border: '1px solid #cbd5e1', borderRadius: 8, padding: 16 }}>
+            <h3 style={{ marginTop: 0 }}>통합 카드 후보</h3>
+            {mergedCards.length > 0 ? (
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', width: 56 }}>#</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', width: 96 }}>코스트</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', width: 180 }}>카드명</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', width: 120 }}>신뢰도</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', width: 160 }}>출처</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'left' }}>설명 후보</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mergedCards.map((card, cardIndex) => (
+                    <tr key={`${card.cardName}-${cardIndex}`} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                      <td style={{ padding: '8px 12px', color: '#64748b' }}>{cardIndex + 1}</td>
+                      <td style={{ padding: '8px 12px' }}>{card.cost ?? emptyText}</td>
+                      <td style={{ padding: '8px 12px', fontWeight: 600 }}>
+                        {card.cardName ?? emptyText}
+                        {card.originalName && card.originalName !== card.cardName ? (
+                          <span style={{ display: 'block', color: '#94a3b8', fontWeight: 400, fontSize: 12 }}>
+                            원문: {card.originalName}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td style={{ padding: '8px 12px' }}>
+                        {typeof card.nameConfidence === 'number' ? Math.round(card.nameConfidence * 100) : emptyText}
+                      </td>
+                      <td style={{ padding: '8px 12px', color: '#64748b' }}>{card.sourceFile ?? emptyText}</td>
+                      <td style={{ padding: '8px 12px', color: card.description ? '#334155' : '#94a3b8' }}>
+                        {card.description ?? emptyText}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p style={{ color: '#94a3b8' }}>통합된 카드 후보가 없습니다.</p>
+            )}
+          </section>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             {results.map((result) => (
               <article
@@ -135,6 +196,7 @@ export default function OcrTester() {
                   <p style={{ marginTop: 0, color: '#64748b', fontSize: 13 }}>
                     crop: x {result.preprocessing.region.left}, y {result.preprocessing.region.top}, w{' '}
                     {result.preprocessing.region.width}, h {result.preprocessing.region.height}
+                    {result.preprocessing.slotCount ? `, slots ${result.preprocessing.slotCount}` : ''}
                   </p>
                 )}
 
@@ -152,6 +214,7 @@ export default function OcrTester() {
                         <th style={{ padding: '8px 12px', textAlign: 'left', width: 56 }}>#</th>
                         <th style={{ padding: '8px 12px', textAlign: 'left', width: 96 }}>코스트</th>
                         <th style={{ padding: '8px 12px', textAlign: 'left', width: 180 }}>카드명</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', width: 120 }}>신뢰도</th>
                         <th style={{ padding: '8px 12px', textAlign: 'left' }}>설명 후보</th>
                       </tr>
                     </thead>
@@ -160,7 +223,17 @@ export default function OcrTester() {
                         <tr key={`${card.cardName}-${cardIndex}`} style={{ borderBottom: '1px solid #e2e8f0' }}>
                           <td style={{ padding: '8px 12px', color: '#64748b' }}>{cardIndex + 1}</td>
                           <td style={{ padding: '8px 12px' }}>{card.cost ?? emptyText}</td>
-                          <td style={{ padding: '8px 12px', fontWeight: 600 }}>{card.cardName ?? emptyText}</td>
+                          <td style={{ padding: '8px 12px', fontWeight: 600 }}>
+                            {card.cardName ?? emptyText}
+                            {card.originalName && card.originalName !== card.cardName ? (
+                              <span style={{ display: 'block', color: '#94a3b8', fontWeight: 400, fontSize: 12 }}>
+                                원문: {card.originalName}
+                              </span>
+                            ) : null}
+                          </td>
+                          <td style={{ padding: '8px 12px' }}>
+                            {typeof card.nameConfidence === 'number' ? Math.round(card.nameConfidence * 100) : emptyText}
+                          </td>
                           <td style={{ padding: '8px 12px', color: card.description ? '#334155' : '#94a3b8' }}>
                             {card.description ?? emptyText}
                           </td>

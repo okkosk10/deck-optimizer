@@ -3,8 +3,8 @@
 const fs = require('fs');
 const { extractText } = require('./extractText');
 const { parseCardText } = require('./parseCardText');
-const { parseDeckText } = require('./deckParser');
-const { createDeckRegionCrop } = require('./imagePreprocess');
+const { correctCards, mergeCards, parseCardSlotText, parseDeckText } = require('./deckParser');
+const { createCardSlotCrops, createDeckRegionCrop } = require('./imagePreprocess');
 
 /**
  * 이미지 경로를 받아 OCR 텍스트 추출 및 카드 정보 파싱을 수행한다.
@@ -30,10 +30,28 @@ async function safeUnlink(filePath) {
 
 async function processDeckScreenshot(imagePath) {
   const crop = await createDeckRegionCrop(imagePath);
+  const slotCrop = await createCardSlotCrops(imagePath);
+  const temporaryFiles = [crop.path, ...slotCrop.slots.map((slot) => slot.path)];
 
   try {
     const rawText = await extractText(crop.path);
-    const cards = parseDeckText(rawText);
+    const slotCards = [];
+
+    for (const slot of slotCrop.slots) {
+      const slotText = await extractText(slot.path);
+      const card = parseCardSlotText(slotText, slot);
+
+      if (card) {
+        slotCards.push(card);
+      }
+    }
+
+    const regionCards = parseDeckText(rawText);
+    const correctedSlotCards = correctCards(slotCards, { minConfidence: 0.7 });
+    const cards =
+      correctedSlotCards.length > 0
+        ? [...correctedSlotCards, ...regionCards].slice(0, 24)
+        : regionCards;
     const parsed = cards[0] ?? parseCardText(rawText);
 
     return {
@@ -44,6 +62,7 @@ async function processDeckScreenshot(imagePath) {
         mode: 'deck-region-crop',
         region: crop.region,
         sourceSize: crop.sourceSize,
+        slotCount: slotCrop.slots.length,
       },
       warnings:
         cards.length === 0
@@ -51,7 +70,7 @@ async function processDeckScreenshot(imagePath) {
           : [],
     };
   } finally {
-    await safeUnlink(crop.path);
+    await Promise.all(temporaryFiles.map((filePath) => safeUnlink(filePath)));
   }
 }
 

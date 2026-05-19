@@ -1,5 +1,7 @@
 'use strict';
 
+const { correctCards, normalizeName } = require('./cardNameCorrection');
+
 const NOISE_PATTERNS = [
   /^상세 정보$/,
   /^능력치$/,
@@ -85,7 +87,7 @@ function mergeCards(cards) {
   const byKey = new Map();
 
   for (const card of cards) {
-    const key = `${card.cost ?? ''}:${card.cardName.replace(/\s/g, '')}`;
+    const key = `${card.cost ?? ''}:${normalizeName(card.cardName)}`;
     const existing = byKey.get(key);
 
     if (!existing) {
@@ -104,6 +106,67 @@ function mergeCards(cards) {
     ...card,
     sources: Array.from(new Set(card.sources)),
   }));
+}
+
+function parseCardSlotText(rawText, slot) {
+  const lines = rawText
+    .split(/\r?\n/)
+    .map(normalizeLine)
+    .filter(Boolean)
+    .filter((line) => !isNoise(line));
+
+  if (lines.length === 0) return null;
+
+  let cardName = null;
+  let cost = null;
+  let nameIndex = -1;
+
+  for (const [lineIndex, line] of lines.entries()) {
+    const costAndName = parseCostAndName(line);
+
+    if (costAndName) {
+      cardName = costAndName.name;
+      cost = costAndName.cost;
+      nameIndex = lineIndex;
+      break;
+    }
+
+    if (/^[0-9Oo○ㅇIl|｜]$/.test(line) && lines[lineIndex + 1] && isPotentialName(lines[lineIndex + 1])) {
+      cost = normalizeCost(line);
+      cardName = lines[lineIndex + 1];
+      nameIndex = lineIndex + 1;
+      break;
+    }
+  }
+
+  if (!cardName) {
+    nameIndex = lines.findIndex(isPotentialName);
+    cardName = nameIndex >= 0 ? lines[nameIndex] : null;
+  }
+
+  if (!cardName) return null;
+
+  const descriptionLines = lines
+    .slice(nameIndex + 1)
+    .filter((line) => line !== cardName)
+    .filter((line) => !parseCostAndName(line))
+    .filter((line) => !isPotentialName(line) || isEffectLine(line));
+  const description = descriptionLines.join(' ').trim() || null;
+
+  return {
+    cardName,
+    cost,
+    attack: null,
+    defense: null,
+    description,
+    rawText,
+    sources: [`slot:${slot.row + 1}-${slot.column + 1}`],
+    slot: {
+      row: slot.row,
+      column: slot.column,
+      region: slot.region,
+    },
+  };
 }
 
 function parseDeckText(rawText) {
@@ -142,7 +205,7 @@ function parseDeckText(rawText) {
 
   if (current) cards.push(current);
 
-  return mergeCards(cards).slice(0, 20);
+  return correctCards(mergeCards(cards), { minConfidence: 0.7 }).slice(0, 20);
 }
 
-module.exports = { parseDeckText };
+module.exports = { parseDeckText, parseCardSlotText, mergeCards, correctCards };

@@ -8,6 +8,21 @@ export interface ParsedCard {
 
 export interface DetectedCard extends ParsedCard {
   sources?: string[];
+  originalName?: string;
+  nameConfidence?: number;
+  matchedName?: string | null;
+  rawText?: string;
+  slot?: {
+    row: number;
+    column: number;
+    region: {
+      left: number;
+      top: number;
+      width: number;
+      height: number;
+    };
+  };
+  sourceFile?: string;
 }
 
 export interface OcrResult {
@@ -31,6 +46,7 @@ export interface BatchOcrResult extends OcrResult {
       width: number;
       height: number;
     };
+    slotCount?: number;
   };
   warnings?: string[];
 }

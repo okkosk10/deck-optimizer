@@ -49,4 +49,51 @@ async function createDeckRegionCrop(imagePath) {
   };
 }
 
-module.exports = { createDeckRegionCrop };
+async function createCardSlotCrops(imagePath) {
+  const sourceImage = sharp(imagePath);
+  const metadata = await sourceImage.metadata();
+  const deckRegion = toSafeRegion(metadata, DECK_REGION_RATIOS);
+  const parsedPath = path.parse(imagePath);
+  const columns = 4;
+  const rows = 3;
+  const cellWidth = deckRegion.width / columns;
+  const rowStep = deckRegion.height * 0.455;
+  const cardWidth = Math.floor(cellWidth * 0.95);
+  const cardHeight = Math.floor(deckRegion.height * 0.43);
+  const xInset = Math.floor(cellWidth * 0.025);
+  const yInset = Math.floor(deckRegion.height * 0.012);
+  const slots = [];
+
+  for (let row = 0; row < rows; row += 1) {
+    for (let column = 0; column < columns; column += 1) {
+      const left = Math.max(0, Math.floor(deckRegion.left + column * cellWidth + xInset));
+      const top = Math.max(0, Math.floor(deckRegion.top + row * rowStep + yInset));
+      const width = Math.min(cardWidth, metadata.width - left);
+      const height = Math.min(cardHeight, metadata.height - top);
+
+      if (width <= 24 || height <= 24) continue;
+
+      const outputPath = path.join(parsedPath.dir, `${parsedPath.name}-slot-${row + 1}-${column + 1}.png`);
+      const region = { left, top, width, height };
+
+      await sharp(imagePath).extract(region).png().toFile(outputPath);
+      slots.push({
+        path: outputPath,
+        row,
+        column,
+        region,
+      });
+    }
+  }
+
+  return {
+    slots,
+    deckRegion,
+    sourceSize: {
+      width: metadata.width,
+      height: metadata.height,
+    },
+  };
+}
+
+module.exports = { createDeckRegionCrop, createCardSlotCrops };
