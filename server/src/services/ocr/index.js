@@ -3,7 +3,7 @@
 const fs = require('fs');
 const { extractText } = require('./extractText');
 const { parseCardText } = require('./parseCardText');
-const { correctCards, mergeCards, parseCardSlotText, parseDeckText } = require('./deckParser');
+const { correctCards, parseCardSlotText, parseDeckText } = require('./deckParser');
 const { createCardSlotCrops, createDeckRegionCrop } = require('./imagePreprocess');
 
 /**
@@ -48,10 +48,7 @@ async function processDeckScreenshot(imagePath) {
 
     const regionCards = parseDeckText(rawText);
     const correctedSlotCards = correctCards(slotCards, { minConfidence: 0.7 });
-    const cards =
-      correctedSlotCards.length > 0
-        ? [...correctedSlotCards, ...regionCards].slice(0, 24)
-        : regionCards;
+    const cards = correctedSlotCards.length > 0 ? correctedSlotCards : regionCards;
     const parsed = cards[0] ?? parseCardText(rawText);
 
     return {

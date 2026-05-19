@@ -10,20 +10,49 @@ interface PreviewFile {
 const emptyText = '-';
 
 function collectDetectedCards(results: BatchOcrResult[]) {
-  const cards: DetectedCard[] = [];
+  const stitchedCards: DetectedCard[] = [];
+  const orderedResults = [...results].sort((a, b) => getFirstCardTop(a) - getFirstCardTop(b));
 
-  for (const result of results) {
-    for (const card of result.cards ?? []) {
-      if (!card.cardName) continue;
-
-      cards.push({
+  for (const result of orderedResults) {
+    const imageCards = (result.cards ?? [])
+      .filter((card) => card.cardName)
+      .map((card) => ({
         ...card,
         sourceFile: result.fileName,
-      });
+      }));
+
+    const overlap = findSequenceOverlap(stitchedCards, imageCards);
+    stitchedCards.push(...imageCards.slice(overlap));
+  }
+
+  return stitchedCards;
+}
+
+function getFirstCardTop(result: BatchOcrResult) {
+  const tops = (result.cards ?? [])
+    .map((card) => card.slot?.region.top)
+    .filter((top): top is number => typeof top === 'number');
+
+  return tops.length > 0 ? Math.min(...tops) : Number.MAX_SAFE_INTEGER;
+}
+
+function getCardKey(card: DetectedCard) {
+  return card.cardId ?? `${card.cost ?? ''}:${card.cardName ?? ''}`;
+}
+
+function findSequenceOverlap(left: DetectedCard[], right: DetectedCard[]) {
+  const maxOverlap = Math.min(left.length, right.length);
+
+  for (let size = maxOverlap; size > 0; size -= 1) {
+    const leftSuffix = left.slice(left.length - size).map(getCardKey);
+    const rightPrefix = right.slice(0, size).map(getCardKey);
+
+    if (leftSuffix.every((key, index) => key === rightPrefix[index])) {
+      return size;
     }
   }
 
-  return cards;
+  return 0;
 }
 
 export default function OcrTester() {

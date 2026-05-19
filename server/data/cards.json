@@ -250,6 +250,16 @@
     "relatedCards": ["haidemary-polar-release"]
   },
   {
+    "id": "haidemary-persona-noire",
+    "character": "하이데마리",
+    "name": "칠흑의 페르소나",
+    "aliases": ["칠흑의페르소나"],
+    "cost": 1,
+    "type": "스킬",
+    "tags": ["유일", "안식"],
+    "effectText": "뽑을 카드에 무작위 안식 카드 1장 버리기. 어둠의 각인 수만큼 무작위 안식 카드 버리기. 어둠의 각인 4: 1턴간 자신의 안식 카드 피해 40%."
+  },
+  {
     "id": "haidemary-polar-sword",
     "character": "하이데마리",
     "name": "극광검",
