@@ -11,6 +11,11 @@ export interface DetectedCard extends ParsedCard {
   character?: string | null;
   type?: string | null;
   tags?: string[];
+  effects?: CardEffect[];
+  creates?: string[];
+  generated?: boolean;
+  transformsTo?: string | null;
+  transformTiming?: string | null;
   dbEffectText?: string | null;
   sparkVariants?: {
     id: string;
@@ -19,6 +24,9 @@ export interface DetectedCard extends ParsedCard {
     type: string | null;
     tags?: string[];
     effectText: string;
+    effects?: CardEffect[];
+    spark?: boolean;
+    baseCardId?: string;
   }[];
   sources?: string[];
   originalName?: string;
@@ -36,6 +44,17 @@ export interface DetectedCard extends ParsedCard {
     };
   };
   sourceFile?: string;
+}
+
+export interface CardEffect {
+  type: string;
+  value?: number;
+  hits?: number;
+  count?: number;
+  cardId?: string;
+  trigger?: string;
+  zone?: string;
+  [key: string]: unknown;
 }
 
 export interface OcrResult {

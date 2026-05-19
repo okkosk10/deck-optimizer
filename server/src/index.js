@@ -21,6 +21,7 @@ const cors = require('cors');
 // 라우터 import
 const healthRouter = require('./routes/health');
 const ocrRouter = require('./routes/ocr');
+const deckRouter = require('./routes/deck');
 
 // 미들웨어 import
 const errorHandler = require('./middleware/errorHandler');
@@ -54,6 +55,9 @@ app.use('/api/health', healthRouter);
 
 // OCR 라우터: /api/ocr (이후 Google Vision API 연동 시 구현)
 app.use('/api/ocr', ocrRouter);
+
+// 덱 분석 라우터: /api/deck
+app.use('/api/deck', deckRouter);
 
 // 에러 핸들러: 모든 라우터 등록 후 마지막에 위치해야 한다.
 app.use(errorHandler);

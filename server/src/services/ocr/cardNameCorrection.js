@@ -120,6 +120,11 @@ function correctCards(inputCards, options = {}) {
         type: matchedCard?.type ?? null,
         tags: matchedCard?.tags ?? [],
         dbEffectText: matchedCard?.effectText ?? null,
+        effects: matchedCard?.effects ?? [],
+        creates: matchedCard?.creates ?? [],
+        generated: matchedCard?.generated ?? false,
+        transformsTo: matchedCard?.transformsTo ?? null,
+        transformTiming: matchedCard?.transformTiming ?? null,
         sparkVariants: matchedCard?.sparkVariants ?? [],
         character: matchedCard?.character ?? null,
       };

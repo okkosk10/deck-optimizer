@@ -55,6 +55,93 @@ function findSequenceOverlap(left: DetectedCard[], right: DetectedCard[]) {
   return 0;
 }
 
+function summarizeDeck(cards: DetectedCard[]) {
+  const totalCards = cards.length;
+  const totalCost = cards.reduce((sum, card) => sum + Number(card.cost ?? 0), 0);
+  const tagCounts = countValues(cards.flatMap((card) => card.tags ?? []));
+  const typeCounts = countValues(cards.map((card) => card.type).filter(Boolean) as string[]);
+  const deckList = Array.from(
+    cards.reduce((counts, card) => {
+      const key = card.cardId ?? `${card.cost ?? ''}:${card.cardName ?? ''}`;
+      const current = counts.get(key);
+
+      counts.set(key, {
+        card,
+        count: (current?.count ?? 0) + 1,
+      });
+
+      return counts;
+    }, new Map<string, { card: DetectedCard; count: number }>())
+  ).map(([cardId, value]) => ({
+    cardId,
+    count: value.count,
+    name: value.card.cardName ?? cardId,
+    cost: value.card.cost ?? null,
+  }));
+  const effectSummary = cards.reduce(
+    (summary, card) => {
+      for (const effect of card.effects ?? []) {
+        if (effect.type === 'damage') {
+          summary.directDamage += (effect.value ?? 0) * (effect.hits ?? 1);
+        }
+
+        if (effect.type === 'draw') {
+          summary.draw += effect.count ?? 0;
+        }
+
+        if (effect.type === 'create_card' && effect.cardId) {
+          summary.createdCards[effect.cardId] = (summary.createdCards[effect.cardId] ?? 0) + (effect.count ?? 1);
+        }
+
+        if (effect.type === 'damage_bonus' || effect.type === 'damage_bonus_per_card') {
+          summary.damageBonusRules += 1;
+        }
+      }
+
+      return summary;
+    },
+    {
+      directDamage: 0,
+      draw: 0,
+      createdCards: {} as Record<string, number>,
+      damageBonusRules: 0,
+    }
+  );
+
+  return {
+    deckList,
+    totalCards,
+    totalCost,
+    averageCost: totalCards > 0 ? (totalCost / totalCards).toFixed(2) : '0',
+    tagCounts,
+    typeCounts,
+    effectSummary,
+    sparkVariantOptions: cards.reduce((sum, card) => sum + (card.sparkVariants?.length ?? 0), 0),
+  };
+}
+
+function countValues(values: string[]) {
+  return values.reduce<Record<string, number>>((counts, value) => {
+    counts[value] = (counts[value] ?? 0) + 1;
+    return counts;
+  }, {});
+}
+
+function formatCounts(counts: Record<string, number>) {
+  const entries = Object.entries(counts);
+
+  return entries.length > 0 ? entries.map(([key, count]) => `${key} ${count}`).join(', ') : emptyText;
+}
+
+function SummaryItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 12, background: '#f8fafc' }}>
+      <div style={{ color: '#64748b', fontSize: 12, marginBottom: 4 }}>{label}</div>
+      <div style={{ color: '#0f172a', fontWeight: 700, wordBreak: 'break-word' }}>{value || emptyText}</div>
+    </div>
+  );
+}
+
 export default function OcrTester() {
   const [previews, setPreviews] = useState<PreviewFile[]>([]);
   const [results, setResults] = useState<BatchOcrResult[]>([]);
@@ -62,6 +149,7 @@ export default function OcrTester() {
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const mergedCards = useMemo(() => collectDetectedCards(results), [results]);
+  const deckSummary = useMemo(() => summarizeDeck(mergedCards), [mergedCards]);
 
   useEffect(() => {
     return () => {
@@ -171,55 +259,81 @@ export default function OcrTester() {
           <section style={{ marginBottom: 24, border: '1px solid #cbd5e1', borderRadius: 8, padding: 16 }}>
             <h3 style={{ marginTop: 0 }}>통합 카드 후보</h3>
             {mergedCards.length > 0 ? (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', width: 56 }}>#</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', width: 96 }}>코스트</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', width: 180 }}>카드명</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', width: 120 }}>분류</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', width: 96 }}>신뢰도</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', width: 150 }}>출처</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'left' }}>설명 후보</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mergedCards.map((card, cardIndex) => (
-                    <tr key={`${card.cardName}-${cardIndex}`} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                      <td style={{ padding: '8px 12px', color: '#64748b' }}>{cardIndex + 1}</td>
-                      <td style={{ padding: '8px 12px' }}>{card.cost ?? emptyText}</td>
-                      <td style={{ padding: '8px 12px', fontWeight: 600 }}>
-                        {card.cardName ?? emptyText}
-                        {card.originalName && card.originalName !== card.cardName ? (
-                          <span style={{ display: 'block', color: '#94a3b8', fontWeight: 400, fontSize: 12 }}>
-                            원문: {card.originalName}
-                          </span>
-                        ) : null}
-                      </td>
-                      <td style={{ padding: '8px 12px', color: '#475569' }}>
-                        {card.type ?? emptyText}
-                        {card.tags && card.tags.length > 0 ? (
-                          <span style={{ display: 'block', color: '#94a3b8', fontSize: 12 }}>
-                            {card.tags.join(', ')}
-                          </span>
-                        ) : null}
-                        {card.sparkVariants && card.sparkVariants.length > 0 ? (
-                          <span style={{ display: 'block', color: '#2563eb', fontSize: 12 }}>
-                            번뜩임 {card.sparkVariants.length}
-                          </span>
-                        ) : null}
-                      </td>
-                      <td style={{ padding: '8px 12px' }}>
-                        {typeof card.nameConfidence === 'number' ? Math.round(card.nameConfidence * 100) : emptyText}
-                      </td>
-                      <td style={{ padding: '8px 12px', color: '#64748b' }}>{card.sourceFile ?? emptyText}</td>
-                      <td style={{ padding: '8px 12px', color: card.description ? '#334155' : '#94a3b8' }}>
-                        {card.dbEffectText || card.description || emptyText}
-                      </td>
+              <>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                    gap: 12,
+                    marginBottom: 16,
+                  }}
+                >
+                  <SummaryItem label="카드 수" value={`${deckSummary.totalCards}`} />
+                  <SummaryItem label="총 비용" value={`${deckSummary.totalCost}`} />
+                  <SummaryItem label="평균 비용" value={deckSummary.averageCost} />
+                  <SummaryItem label="분류" value={formatCounts(deckSummary.typeCounts)} />
+                  <SummaryItem label="태그" value={formatCounts(deckSummary.tagCounts)} />
+                  <SummaryItem
+                    label="생성"
+                    value={formatCounts(deckSummary.effectSummary.createdCards).replace(
+                      'haidemary-polar-sword',
+                      '극광검'
+                    )}
+                  />
+                  <SummaryItem label="드로우" value={`${deckSummary.effectSummary.draw}`} />
+                  <SummaryItem label="번뜩임 후보" value={`${deckSummary.sparkVariantOptions}`} />
+                </div>
+
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', width: 56 }}>#</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', width: 96 }}>코스트</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', width: 180 }}>카드명</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', width: 120 }}>분류</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', width: 96 }}>신뢰도</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', width: 150 }}>출처</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'left' }}>설명 후보</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {mergedCards.map((card, cardIndex) => (
+                      <tr key={`${card.cardName}-${cardIndex}`} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                        <td style={{ padding: '8px 12px', color: '#64748b' }}>{cardIndex + 1}</td>
+                        <td style={{ padding: '8px 12px' }}>{card.cost ?? emptyText}</td>
+                        <td style={{ padding: '8px 12px', fontWeight: 600 }}>
+                          {card.cardName ?? emptyText}
+                          {card.originalName && card.originalName !== card.cardName ? (
+                            <span style={{ display: 'block', color: '#94a3b8', fontWeight: 400, fontSize: 12 }}>
+                              원문: {card.originalName}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td style={{ padding: '8px 12px', color: '#475569' }}>
+                          {card.type ?? emptyText}
+                          {card.tags && card.tags.length > 0 ? (
+                            <span style={{ display: 'block', color: '#94a3b8', fontSize: 12 }}>
+                              {card.tags.join(', ')}
+                            </span>
+                          ) : null}
+                          {card.sparkVariants && card.sparkVariants.length > 0 ? (
+                            <span style={{ display: 'block', color: '#2563eb', fontSize: 12 }}>
+                              번뜩임 {card.sparkVariants.length}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td style={{ padding: '8px 12px' }}>
+                          {typeof card.nameConfidence === 'number' ? Math.round(card.nameConfidence * 100) : emptyText}
+                        </td>
+                        <td style={{ padding: '8px 12px', color: '#64748b' }}>{card.sourceFile ?? emptyText}</td>
+                        <td style={{ padding: '8px 12px', color: card.description ? '#334155' : '#94a3b8' }}>
+                          {card.dbEffectText || card.description || emptyText}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
             ) : (
               <p style={{ color: '#94a3b8' }}>통합된 카드 후보가 없습니다.</p>
             )}
