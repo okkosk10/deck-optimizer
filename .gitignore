@@ -28,6 +28,8 @@ server/.env
 !package.json
 !tsconfig*.json
 !eslint.config.js
+!server/data/
+!server/data/cards.json
 
 # 업로드된 파일
 server/uploads/*

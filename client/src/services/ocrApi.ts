@@ -7,6 +7,19 @@ export interface ParsedCard {
 }
 
 export interface DetectedCard extends ParsedCard {
+  cardId?: string | null;
+  character?: string | null;
+  type?: string | null;
+  tags?: string[];
+  dbEffectText?: string | null;
+  sparkVariants?: {
+    id: string;
+    name: string;
+    cost: number | null;
+    type: string | null;
+    tags?: string[];
+    effectText: string;
+  }[];
   sources?: string[];
   originalName?: string;
   nameConfidence?: number;

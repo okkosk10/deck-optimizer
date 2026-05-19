@@ -148,8 +148,9 @@ export default function OcrTester() {
                     <th style={{ padding: '8px 12px', textAlign: 'left', width: 56 }}>#</th>
                     <th style={{ padding: '8px 12px', textAlign: 'left', width: 96 }}>코스트</th>
                     <th style={{ padding: '8px 12px', textAlign: 'left', width: 180 }}>카드명</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', width: 120 }}>신뢰도</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', width: 160 }}>출처</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', width: 120 }}>분류</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', width: 96 }}>신뢰도</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', width: 150 }}>출처</th>
                     <th style={{ padding: '8px 12px', textAlign: 'left' }}>설명 후보</th>
                   </tr>
                 </thead>
@@ -166,12 +167,25 @@ export default function OcrTester() {
                           </span>
                         ) : null}
                       </td>
+                      <td style={{ padding: '8px 12px', color: '#475569' }}>
+                        {card.type ?? emptyText}
+                        {card.tags && card.tags.length > 0 ? (
+                          <span style={{ display: 'block', color: '#94a3b8', fontSize: 12 }}>
+                            {card.tags.join(', ')}
+                          </span>
+                        ) : null}
+                        {card.sparkVariants && card.sparkVariants.length > 0 ? (
+                          <span style={{ display: 'block', color: '#2563eb', fontSize: 12 }}>
+                            번뜩임 {card.sparkVariants.length}
+                          </span>
+                        ) : null}
+                      </td>
                       <td style={{ padding: '8px 12px' }}>
                         {typeof card.nameConfidence === 'number' ? Math.round(card.nameConfidence * 100) : emptyText}
                       </td>
                       <td style={{ padding: '8px 12px', color: '#64748b' }}>{card.sourceFile ?? emptyText}</td>
                       <td style={{ padding: '8px 12px', color: card.description ? '#334155' : '#94a3b8' }}>
-                        {card.description ?? emptyText}
+                        {card.dbEffectText || card.description || emptyText}
                       </td>
                     </tr>
                   ))}
@@ -214,7 +228,8 @@ export default function OcrTester() {
                         <th style={{ padding: '8px 12px', textAlign: 'left', width: 56 }}>#</th>
                         <th style={{ padding: '8px 12px', textAlign: 'left', width: 96 }}>코스트</th>
                         <th style={{ padding: '8px 12px', textAlign: 'left', width: 180 }}>카드명</th>
-                        <th style={{ padding: '8px 12px', textAlign: 'left', width: 120 }}>신뢰도</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', width: 120 }}>분류</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', width: 96 }}>신뢰도</th>
                         <th style={{ padding: '8px 12px', textAlign: 'left' }}>설명 후보</th>
                       </tr>
                     </thead>
@@ -231,11 +246,24 @@ export default function OcrTester() {
                               </span>
                             ) : null}
                           </td>
+                          <td style={{ padding: '8px 12px', color: '#475569' }}>
+                            {card.type ?? emptyText}
+                            {card.tags && card.tags.length > 0 ? (
+                              <span style={{ display: 'block', color: '#94a3b8', fontSize: 12 }}>
+                                {card.tags.join(', ')}
+                              </span>
+                            ) : null}
+                            {card.sparkVariants && card.sparkVariants.length > 0 ? (
+                              <span style={{ display: 'block', color: '#2563eb', fontSize: 12 }}>
+                                번뜩임 {card.sparkVariants.length}
+                              </span>
+                            ) : null}
+                          </td>
                           <td style={{ padding: '8px 12px' }}>
                             {typeof card.nameConfidence === 'number' ? Math.round(card.nameConfidence * 100) : emptyText}
                           </td>
                           <td style={{ padding: '8px 12px', color: card.description ? '#334155' : '#94a3b8' }}>
-                            {card.description ?? emptyText}
+                            {card.dbEffectText || card.description || emptyText}
                           </td>
                         </tr>
                       ))}

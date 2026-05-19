@@ -1,0 +1,276 @@
+[
+  {
+    "id": "haidemary-sword-light",
+    "character": "하이데마리",
+    "name": "검광",
+    "aliases": ["검광", "검강"],
+    "cost": 1,
+    "type": "공격",
+    "tags": [],
+    "effectText": "피해 112%"
+  },
+  {
+    "id": "haidemary-sword-guard",
+    "character": "하이데마리",
+    "name": "검막",
+    "aliases": ["검막"],
+    "cost": 1,
+    "type": "스킬",
+    "tags": [],
+    "effectText": "실드 102%"
+  },
+  {
+    "id": "haidemary-sword-rain",
+    "character": "하이데마리",
+    "name": "검의 비",
+    "aliases": ["검의비", "검의 비", "음극광검 1장 섬섬", "극광검 1장 섬섬", ": 극광검 1장 섬섬"],
+    "cost": 1,
+    "type": "공격",
+    "tags": ["연결"],
+    "effectText": "피해 96% x 2. 감은: 극광검 1장 생성.",
+    "creates": ["haidemary-polar-sword"],
+    "sparkVariants": [
+      {
+        "id": "haidemary-sword-rain-spark-rest",
+        "name": "검의 비",
+        "cost": 1,
+        "type": "공격",
+        "tags": ["연결", "안식"],
+        "effectText": "피해 96% x 2. 감응: 극광검 2장 생성.",
+        "creates": ["haidemary-polar-sword"]
+      },
+      {
+        "id": "haidemary-sword-rain-spark-swift",
+        "name": "검의 비",
+        "cost": 2,
+        "type": "공격",
+        "tags": ["신속"],
+        "effectText": "피해 216%. 핸드의 극광 수만큼 타격 1회 추가. 감응: 극광검 1장 생성.",
+        "creates": ["haidemary-polar-sword"]
+      },
+      {
+        "id": "haidemary-sword-rain-spark-grave-trigger",
+        "name": "검의 비",
+        "cost": 1,
+        "type": "스킬",
+        "tags": [],
+        "effectText": "무덤의 극광검 5장 대상에게 추가 공격으로 발동."
+      },
+      {
+        "id": "haidemary-sword-rain-spark-recall",
+        "name": "검의 비",
+        "cost": 1,
+        "type": "스킬",
+        "tags": [],
+        "effectText": "극광검 2장 생성, 그 카드에 회수 부여.",
+        "creates": ["haidemary-polar-sword"]
+      },
+      {
+        "id": "haidemary-sword-rain-spark-release-finisher",
+        "name": "검의 비",
+        "cost": 3,
+        "type": "공격",
+        "tags": ["소멸", "중독", "보존", "유일"],
+        "effectText": "모든 적 피해 600%. 핸드에 극광 해방이 있다면 소멸하고 무덤의 극광검 수만큼 피해량 +100%.",
+        "requires": ["haidemary-polar-release"]
+      }
+    ]
+  },
+  {
+    "id": "haidemary-everyones-hero",
+    "character": "하이데마리",
+    "name": "만인의 영웅",
+    "aliases": ["만인의영웅"],
+    "cost": 1,
+    "type": "스킬",
+    "tags": ["안식"],
+    "effectText": "드로우 3. 그 카드들을 이번 턴 동안 연결.",
+    "sparkVariants": [
+      {
+        "id": "haidemary-everyones-hero-spark-rest-link",
+        "name": "만인의 영웅",
+        "cost": 1,
+        "type": "스킬",
+        "tags": ["연결", "안식"],
+        "effectText": "드로우 3. 그 카드들을 이번 턴 동안 연결."
+      },
+      {
+        "id": "haidemary-everyones-hero-spark-low-cost-link",
+        "name": "만인의 영웅",
+        "cost": 1,
+        "type": "스킬",
+        "tags": ["안식"],
+        "effectText": "드로우 3. 핸드의 비용이 1 이하인 카드들을 이번 턴 동안 연결."
+      },
+      {
+        "id": "haidemary-everyones-hero-spark-swift-rest-link",
+        "name": "만인의 영웅",
+        "cost": 0,
+        "type": "스킬",
+        "tags": ["신속"],
+        "effectText": "드로우 1. 핸드의 안식 카드를 이번 턴 동안 연결."
+      },
+      {
+        "id": "haidemary-everyones-hero-spark-exile-pick",
+        "name": "만인의 영웅",
+        "cost": 0,
+        "type": "스킬",
+        "tags": ["소멸 2"],
+        "effectText": "뽑을 카드 혹은 버린 카드에서 카드 1장 선택, 그 카드에 연결 부여하고 핸드로 이동."
+      },
+      {
+        "id": "haidemary-everyones-hero-spark-attack-draw",
+        "name": "만인의 영웅",
+        "cost": 1,
+        "type": "스킬",
+        "tags": ["신속"],
+        "effectText": "자신의 공격 카드 드로우 2. 핸드의 모든 공격 카드를 이번 턴 동안 연결."
+      }
+    ]
+  },
+  {
+    "id": "haidemary-ray-of-light",
+    "character": "하이데마리",
+    "name": "한줄기 빛",
+    "aliases": ["한줄기빛"],
+    "cost": 1,
+    "type": "공격",
+    "tags": ["연결"],
+    "effectText": "피해 144%. 핸드의 연결 카드 수만큼 피해량 +120%.",
+    "sparkVariants": [
+      {
+        "id": "haidemary-ray-of-light-spark-chain-scale",
+        "name": "한줄기 빛",
+        "cost": 1,
+        "type": "공격",
+        "tags": ["연결"],
+        "effectText": "피해 216%. 핸드의 연결 카드 수만큼 피해량 +180%."
+      },
+      {
+        "id": "haidemary-ray-of-light-spark-swift-triple",
+        "name": "한줄기 빛",
+        "cost": 2,
+        "type": "공격",
+        "tags": ["연결", "신속"],
+        "effectText": "피해 360%. 핸드의 연결 카드가 3장 이상이라면 피해 3배."
+      },
+      {
+        "id": "haidemary-ray-of-light-spark-rest-buff",
+        "name": "한줄기 빛",
+        "cost": 1,
+        "type": "공격",
+        "tags": ["연결", "안식"],
+        "effectText": "피해 120%. 이 카드가 핸드 혹은 무덤에 있다면 연결 카드의 피해량 +80%."
+      },
+      {
+        "id": "haidemary-ray-of-light-spark-play-all",
+        "name": "한줄기 빛",
+        "cost": 3,
+        "type": "스킬",
+        "tags": ["연결", "소멸"],
+        "effectText": "핸드의 연결 카드를 버리지 않고 모두 발동."
+      },
+      {
+        "id": "haidemary-ray-of-light-spark-unique-burst",
+        "name": "한줄기 빛",
+        "cost": 2,
+        "type": "공격",
+        "tags": ["연결", "유일"],
+        "effectText": "직접 사용 시 피해 420% x 2. 버려질 시 모든 적 피해 360%."
+      }
+    ]
+  },
+  {
+    "id": "haidemary-polar-light-deploy",
+    "character": "하이데마리",
+    "name": "극광 전개",
+    "aliases": ["극광전개", "극광 전", "\"극광 전", "극 전개"],
+    "cost": 2,
+    "type": "스킬",
+    "tags": ["안식"],
+    "effectText": "극광검 2장 생성. 1턴간 극광검 피해량 +50%.",
+    "creates": ["haidemary-polar-sword"],
+    "sparkVariants": [
+      {
+        "id": "haidemary-polar-light-deploy-spark-rest-plus",
+        "name": "극광 전개",
+        "cost": 2,
+        "type": "스킬",
+        "tags": ["연결", "안식"],
+        "effectText": "극광검 2장 생성. 1턴간 극광검 피해량 +70%.",
+        "creates": ["haidemary-polar-sword"]
+      },
+      {
+        "id": "haidemary-polar-light-deploy-spark-next-double",
+        "name": "극광 전개",
+        "cost": 2,
+        "type": "스킬",
+        "tags": ["안식"],
+        "effectText": "극광검 2장 생성. 다음 2번 극광검 피해량 +200%.",
+        "creates": ["haidemary-polar-sword"]
+      },
+      {
+        "id": "haidemary-polar-light-deploy-spark-chain-count",
+        "name": "극광 전개",
+        "cost": 2,
+        "type": "스킬",
+        "tags": ["연결"],
+        "effectText": "핸드의 연결 카드 수만큼 극광검 생성.",
+        "creates": ["haidemary-polar-sword"]
+      },
+      {
+        "id": "haidemary-polar-light-deploy-spark-discard-pile",
+        "name": "극광 전개",
+        "cost": 2,
+        "type": "스킬",
+        "tags": ["연결", "안식"],
+        "effectText": "버린 카드에 극광검 5장 생성.",
+        "creates": ["haidemary-polar-sword"]
+      },
+      {
+        "id": "haidemary-polar-light-deploy-spark-enhance",
+        "name": "극광 전개",
+        "cost": 2,
+        "type": "강화",
+        "tags": ["안식", "유일"],
+        "effectText": "턴 시작 시 극광검 2장 생성. 극광검 피해량 +50%.",
+        "creates": ["haidemary-polar-sword"]
+      }
+    ]
+  },
+  {
+    "id": "haidemary-polar-light-condense",
+    "character": "하이데마리",
+    "name": "극광 응축",
+    "aliases": ["극광응축", "극광 축", "극광 몸", "극광 몸축", "극광옴축"],
+    "cost": 0,
+    "type": "스킬",
+    "tags": ["유일", "연결", "회수 3"],
+    "effectText": "무덤으로 이동 시 극광 해방 1.",
+    "relatedCards": ["haidemary-polar-release"]
+  },
+  {
+    "id": "haidemary-polar-sword",
+    "character": "하이데마리",
+    "name": "극광검",
+    "aliases": ["극광검", "극광 검", "극강검"],
+    "cost": 1,
+    "type": "공격",
+    "tags": ["연결"],
+    "effectText": "피해 144%. 버려질 시 무작위 적 추가 공격 144%. 이 카드는 셔플 시 뽑을 카드로 이동하지 않음.",
+    "generated": true
+  },
+  {
+    "id": "haidemary-polar-release",
+    "character": "하이데마리",
+    "name": "극광 해방",
+    "aliases": ["극광해방", "극광 해방", "극강 해방", "극광의 빛", "극강의 빛", "극강의 빛 1"],
+    "cost": 0,
+    "type": "공격",
+    "tags": ["유일"],
+    "effectText": "피해 840%. 무덤의 극광검 모두 소멸하고 그 수만큼 피해량 +120%. 턴 종료 시 이 카드는 극광 응축으로 변경.",
+    "generated": true,
+    "transformsTo": "haidemary-polar-light-condense",
+    "transformTiming": "turnEnd"
+  }
+]

@@ -1,43 +1,7 @@
 'use strict';
 
-const CARD_DICTIONARY = [
-  {
-    name: '검의 비',
-    aliases: ['검의비', '극광검 1장 섬섬', '음극광검 1장 섬섬', ': 극광검 1장 섬섬'],
-  },
-  {
-    name: '만인의 영웅',
-    aliases: ['만인의영웅'],
-  },
-  {
-    name: '한줄기 빛',
-    aliases: ['한줄기빛'],
-  },
-  {
-    name: '극 전개',
-    aliases: ['극전개'],
-  },
-  {
-    name: '극광 전개',
-    aliases: ['극광전개', '극광 전', '"극광 전', '극광 전개 스킬'],
-  },
-  {
-    name: '극광 응축',
-    aliases: ['극광응축', '극광 축', '극광 몸', '극광 몸축', '극광옴축'],
-  },
-  {
-    name: '칠흑의 페르소나',
-    aliases: ['칠흑의페르소나'],
-  },
-  {
-    name: '어둠의 각인',
-    aliases: ['어둠의각인', '어둠의 각인 수만큼', '둠의 각인', '둠의 각인 4'],
-  },
-  {
-    name: '극강의 빛',
-    aliases: ['극강의빛', '극강의 빛 1'],
-  },
-];
+const path = require('path');
+const cards = require(path.join(__dirname, '..', '..', '..', 'data', 'cards.json'));
 
 function normalizeName(value) {
   return String(value ?? '')
@@ -91,9 +55,9 @@ function similarity(a, b) {
   return 1 - levenshtein(left, right) / maxLength;
 }
 
-function scoreEntry(rawName, entry) {
-  const candidates = [entry.name, ...(entry.aliases ?? [])];
-  let best = { score: 0, matchedText: entry.name };
+function scoreCard(rawName, card) {
+  const candidates = [card.name, ...(card.aliases ?? [])];
+  let best = { score: 0, matchedText: card.name };
 
   for (const candidate of candidates) {
     const score = similarity(rawName, candidate);
@@ -108,13 +72,15 @@ function scoreEntry(rawName, entry) {
 function correctCardName(rawName) {
   let best = null;
 
-  for (const entry of CARD_DICTIONARY) {
-    const scored = scoreEntry(rawName, entry);
+  for (const card of cards) {
+    const scored = scoreCard(rawName, card);
 
     if (!best || scored.score > best.confidence) {
       best = {
         originalName: rawName,
-        cardName: entry.name,
+        card,
+        cardId: card.id,
+        cardName: card.name,
         confidence: Number(scored.score.toFixed(3)),
         matchedText: scored.matchedText,
       };
@@ -124,6 +90,8 @@ function correctCardName(rawName) {
   if (!best || best.confidence < 0.64) {
     return {
       originalName: rawName,
+      card: null,
+      cardId: null,
       cardName: rawName,
       confidence: 0,
       matchedText: null,
@@ -133,21 +101,30 @@ function correctCardName(rawName) {
   return best;
 }
 
-function correctCards(cards, options = {}) {
+function correctCards(inputCards, options = {}) {
   const minConfidence = options.minConfidence ?? 0.68;
 
-  return cards
+  return inputCards
     .map((card) => {
       const correction = correctCardName(card.cardName);
+      const matchedCard = correction.card;
+
       return {
         ...card,
+        cardId: correction.cardId,
         originalName: card.cardName,
         cardName: correction.cardName,
         nameConfidence: correction.confidence,
         matchedName: correction.matchedText,
+        cost: card.cost ?? (matchedCard?.cost == null ? null : String(matchedCard.cost)),
+        type: matchedCard?.type ?? null,
+        tags: matchedCard?.tags ?? [],
+        dbEffectText: matchedCard?.effectText ?? null,
+        sparkVariants: matchedCard?.sparkVariants ?? [],
+        character: matchedCard?.character ?? null,
       };
     })
     .filter((card) => card.nameConfidence >= minConfidence);
 }
 
-module.exports = { CARD_DICTIONARY, correctCardName, correctCards, normalizeName };
+module.exports = { cards, correctCardName, correctCards, normalizeName };
