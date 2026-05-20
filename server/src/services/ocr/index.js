@@ -47,7 +47,7 @@ async function processDeckScreenshot(imagePath) {
     }
 
     const regionCards = parseDeckText(rawText);
-    const correctedSlotCards = correctCards(slotCards, { minConfidence: 0.7 });
+    const correctedSlotCards = correctCards(slotCards, { minConfidence: 0.7, regionRawText: rawText });
     const cards = correctedSlotCards.length > 0 ? correctedSlotCards : regionCards;
     const parsed = cards[0] ?? parseCardText(rawText);
 

@@ -14,9 +14,22 @@ export interface DetectedCard extends ParsedCard {
   effects?: CardEffect[];
   creates?: string[];
   generated?: boolean;
+  baseCardId?: string | null;
   transformsTo?: string | null;
   transformTiming?: string | null;
   dbEffectText?: string | null;
+  selectedSparkVariant?: {
+    id: string;
+    name: string;
+    cost: number | null;
+    type: string | null;
+    tags?: string[];
+    effectText: string;
+    effects?: CardEffect[];
+    spark?: boolean;
+    baseCardId?: string;
+    matchConfidence?: number;
+  } | null;
   sparkVariants?: {
     id: string;
     name: string;

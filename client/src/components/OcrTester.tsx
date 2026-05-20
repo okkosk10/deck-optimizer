@@ -133,6 +133,10 @@ function formatCounts(counts: Record<string, number>) {
   return entries.length > 0 ? entries.map(([key, count]) => `${key} ${count}`).join(', ') : emptyText;
 }
 
+function getDisplayEffectText(card: DetectedCard) {
+  return card.selectedSparkVariant?.effectText ?? card.dbEffectText ?? card.description ?? emptyText;
+}
+
 function SummaryItem({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 12, background: '#f8fafc' }}>
@@ -321,13 +325,18 @@ export default function OcrTester() {
                               번뜩임 {card.sparkVariants.length}
                             </span>
                           ) : null}
+                          {card.selectedSparkVariant ? (
+                            <span style={{ display: 'block', color: '#16a34a', fontSize: 12 }}>
+                              선택됨 {Math.round((card.selectedSparkVariant.matchConfidence ?? 0) * 100)}
+                            </span>
+                          ) : null}
                         </td>
                         <td style={{ padding: '8px 12px' }}>
                           {typeof card.nameConfidence === 'number' ? Math.round(card.nameConfidence * 100) : emptyText}
                         </td>
                         <td style={{ padding: '8px 12px', color: '#64748b' }}>{card.sourceFile ?? emptyText}</td>
                         <td style={{ padding: '8px 12px', color: card.description ? '#334155' : '#94a3b8' }}>
-                          {card.dbEffectText || card.description || emptyText}
+                          {getDisplayEffectText(card)}
                         </td>
                       </tr>
                     ))}
@@ -401,12 +410,17 @@ export default function OcrTester() {
                                 번뜩임 {card.sparkVariants.length}
                               </span>
                             ) : null}
+                            {card.selectedSparkVariant ? (
+                              <span style={{ display: 'block', color: '#16a34a', fontSize: 12 }}>
+                                선택됨 {Math.round((card.selectedSparkVariant.matchConfidence ?? 0) * 100)}
+                              </span>
+                            ) : null}
                           </td>
                           <td style={{ padding: '8px 12px' }}>
                             {typeof card.nameConfidence === 'number' ? Math.round(card.nameConfidence * 100) : emptyText}
                           </td>
                           <td style={{ padding: '8px 12px', color: card.description ? '#334155' : '#94a3b8' }}>
-                            {card.dbEffectText || card.description || emptyText}
+                            {getDisplayEffectText(card)}
                           </td>
                         </tr>
                       ))}
